@@ -6783,6 +6783,18 @@ static void att_connect_cb(GIOChannel *io, GError *gerr, gpointer user_data)
 	enum mgmt_io_capability io_cap;
 	int err = 0;
 
+	/*
+	 * The connect attempt may have been cancelled (e.g. by Disconnect)
+	 * after att_io was shut down and released, while the watch added by
+	 * bt_io_connect still holds its own reference to the channel. Such a
+	 * stale callback must not touch the device state: the fd may already
+	 * have been reused by another socket.
+	 */
+	if (io != device->att_io) {
+		DBG("Ignoring cancelled ATT connect attempt");
+		return;
+	}
+
 	g_io_channel_unref(device->att_io);
 	device->att_io = NULL;
 
