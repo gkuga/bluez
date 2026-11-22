@@ -226,6 +226,13 @@ static gboolean connect_cb(GIOChannel *io, GIOCondition cond,
 	else
 		err = -sk_err;
 
+	/* Reading SO_ERROR clears it, so another watch left on a reused fd
+	 * may already have taken the error. A hangup still means the connect
+	 * failed.
+	 */
+	if (!err && (cond & (G_IO_HUP | G_IO_ERR)))
+		err = -ENOTCONN;
+
 	if (err < 0) {
 		ba2str(&conn->dst, addr);
 		g_set_error(&gerr, BT_IO_ERROR, -err,
